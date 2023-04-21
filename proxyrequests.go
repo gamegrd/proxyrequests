@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 )
 
@@ -68,13 +69,19 @@ func Requests() *Request {
 }
 
 func (req *Request) Send(method string, origurl string, args ...interface{}) (resp *Response, err error) {
-
+	logger := logrus.WithField("func", "proxyrequests")
 	req.httpreq.Method = method
 	thisTransport := &http.Transport{}
-
 	params := map[string]string{}
 	datas := map[string]string{}
+	payload := ""
+	body := ""
 	files := []map[string]string{}
+	statusCode := 0
+
+	defer func(t time.Time) {
+		logger.Debugf("proxyrequests Send: method:[%v] code:[%v] time:[%v] url:[ %v ] payload: [%v] body:[%v]", method, statusCode, time.Since(t), origurl, payload, body)
+	}(time.Now())
 
 	for _, arg := range args {
 		switch a := arg.(type) {
@@ -93,6 +100,7 @@ func (req *Request) Send(method string, origurl string, args ...interface{}) (re
 				req.Header.Set("Content-Type", "application/json")
 			}
 			jsonstr, _ := json.Marshal(a)
+			payload = string(jsonstr)
 			req.setBodyRawBytes(io.NopCloser(strings.NewReader(string(jsonstr))))
 		case Files:
 			files = append(files, a)
@@ -100,6 +108,7 @@ func (req *Request) Send(method string, origurl string, args ...interface{}) (re
 			// a{username,password}
 			req.httpreq.SetBasicAuth(a[0], a[1])
 		case string:
+			payload = a
 			//set default
 			if req.Header.Get("Content-Type") == "" {
 				req.Header.Set("Content-Type", "application/json")
@@ -116,7 +125,7 @@ func (req *Request) Send(method string, origurl string, args ...interface{}) (re
 		case Proxy:
 			proxyURL := string(a)
 			if proxyURL == "" {
-				return
+				break
 			}
 			parsedProxyURL, err := url.Parse(proxyURL)
 			if err != nil {
@@ -189,8 +198,10 @@ func (req *Request) Send(method string, origurl string, args ...interface{}) (re
 	resp.Header = resp.Res.Header
 	resp.Status = resp.Res.Status
 	resp.StatusCode = resp.Res.StatusCode
+	statusCode = resp.StatusCode
 	resp.Content()
 	defer res.Body.Close()
+	body = resp.Text()
 	return resp, nil
 }
 
