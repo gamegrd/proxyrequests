@@ -96,8 +96,6 @@ func (req *Request) Send(method string, origurl string, args ...interface{}) (re
 			req.setBodyRawBytes(io.NopCloser(strings.NewReader(string(jsonstr))))
 		case Files:
 			files = append(files, a)
-		case Payload:
-			req.setBodyRawBytes(io.NopCloser(bytes.NewReader(a)))
 		case Auth:
 			// a{username,password}
 			req.httpreq.SetBasicAuth(a[0], a[1])
