@@ -34,7 +34,7 @@ func TestSocks5Proxy(t *testing.T) {
 	// timeout
 	timeout := SetTimeout(time.Second * 30)
 	// 代理
-	proxy := Proxy("socks://127.0.0.1:21080")
+	proxy := Proxy("socks5h://321:456@127.0.0.1:21080")
 
 	resp, err := Get("https://ipinfo.io", header, proxy, timeout)
 	if err != nil {

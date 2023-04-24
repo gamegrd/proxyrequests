@@ -76,11 +76,12 @@ func (req *Request) Send(method string, origurl string, args ...interface{}) (re
 	datas := map[string]string{}
 	payload := ""
 	body := ""
+	proxyURL := ""
 	files := []map[string]string{}
 	statusCode := 0
 
 	defer func(t time.Time) {
-		logger.Debugf("proxyrequests Send: method:[%v] code:[%v] time:[%v] url:[ %v ] payload: [%v] body:[%v]", method, statusCode, time.Since(t), origurl, payload, body)
+		logger.Debugf("proxyrequests Send: method:[%v] code:[%v] time:[%v] proxy:[%v] url:[ %v ] payload: [%v] body:[%v]", method, statusCode, time.Since(t), proxyURL, origurl, payload, body)
 	}(time.Now())
 
 	for _, arg := range args {
@@ -123,7 +124,7 @@ func (req *Request) Send(method string, origurl string, args ...interface{}) (re
 			// 	Timeout: time.Duration(a),
 			// }).DialContext
 		case Proxy:
-			proxyURL := string(a)
+			proxyURL = string(a)
 			if proxyURL == "" {
 				break
 			}
@@ -135,7 +136,7 @@ func (req *Request) Send(method string, origurl string, args ...interface{}) (re
 			case "http", "https":
 				thisTransport.Proxy = http.ProxyURL(parsedProxyURL)
 				thisTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-			case "socks5", "socks":
+			case "socks5", "socks", "socks5h":
 				dialer, err := proxy.SOCKS5("tcp", parsedProxyURL.Host, nil, proxy.Direct)
 				if err != nil {
 					return nil, err
